@@ -96,9 +96,16 @@ async function run() {
   const foreignInsert = await expensesRequest(other, "", {
     method: "POST",
     body: JSON.stringify([{ owner_id: owner.id }]),
+    headers: { Prefer: "return=minimal" },
   });
   if (foreignInsert.status < 400) {
     fail(`cross-owner insert was allowed: ${foreignInsert.status} ${JSON.stringify(foreignInsert.body)}`);
+  }
+
+  const ownerRecordsAfterForeignInsert = await expensesRequest(owner, "?select=id,owner_id");
+  expectStatus(ownerRecordsAfterForeignInsert, 200, "owner read after cross-owner insert");
+  if (ownerRecordsAfterForeignInsert.body?.length !== 1) {
+    fail(`cross-owner insert created a foreign-owned record: ${JSON.stringify(ownerRecordsAfterForeignInsert.body)}`);
   }
 
   const crossUpdate = await expensesRequest(other, `?id=eq.${ownerExpense.id}`, {

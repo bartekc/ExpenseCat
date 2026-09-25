@@ -11,7 +11,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "smoke": "node scripts/smoke.mjs",
-    "smoke:storage": "node --env-file=.env  scripts/expense-storage-smoke.mjs"
+    "smoke:storage": "node scripts/expense-storage-smoke.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",

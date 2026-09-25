@@ -152,14 +152,14 @@ The migration is additive and has no existing expense records to backfill. CI de
 
 #### Automated
 
-- [x] 1.1 Local migration resets cleanly
-- [x] 1.2 Table and RLS policies are present after reset
+- [x] 1.1 Local migration resets cleanly — d5de847
+- [x] 1.2 Table and RLS policies are present after reset — d5de847
 
 ### Phase 2: Prove owner isolation in CI
 
 #### Automated
 
-- [ ] 2.1 Storage smoke proves owner-only CRUD
+- [x] 2.1 Storage smoke proves owner-only CRUD
 - [x] 2.2 Lint passes
 - [x] 2.3 Astro type checking passes
 - [x] 2.4 Production build succeeds

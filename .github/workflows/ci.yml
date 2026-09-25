@@ -37,15 +37,15 @@ jobs:
         run: |
           supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
           supabase status -o env | grep -E '^(API_URL|ANON_KEY)=' > supabase.env
+      - name: Run expense storage RLS smoke
+        run: |
+          source supabase.env
+          SUPABASE_URL="$API_URL" SUPABASE_KEY="$ANON_KEY" npm run smoke:storage
       - name: Configure secrets for build and preview
         run: |
           source supabase.env
           printf 'SUPABASE_URL=%s\nSUPABASE_KEY=%s\n' "$API_URL" "$ANON_KEY" > .env
           cp .env .dev.vars
-      - name: Run expense storage RLS smoke
-        run: |
-          source supabase.env
-          SUPABASE_URL="$API_URL" SUPABASE_KEY="$ANON_KEY" npm run smoke:storage
       - run: npm run build
       - name: Run smoke test against production preview
         run: |
