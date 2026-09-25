@@ -112,7 +112,7 @@ npx supabase stop
 
 The local Studio UI is available at `http://localhost:54323`.
 
-No database tables or migrations are required — this project uses Supabase Auth's built-in `auth.users` table only.
+Project database changes live in `supabase/migrations/`. Local Supabase applies pending migrations during `npx supabase start`; run `npx supabase db reset` to recreate the local database and reapply them from scratch.
 
 ### Using a cloud Supabase project instead
 
@@ -165,7 +165,30 @@ npm run build
 npx wrangler deploy
 ```
 
+The production Worker is named `expensecat`. The preview environment is a separate
+Worker named `expensecat-preview` and uses the Workers environment flag:
+
+```bash
+npx wrangler deploy --env preview
+```
+
+This is a Workers deployment. Do not use `wrangler pages deploy` for this project.
+
 Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or via `npx wrangler secret put`.
+
+Configure production secrets with:
+
+```bash
+npx wrangler secret put SUPABASE_URL
+npx wrangler secret put SUPABASE_KEY
+```
+
+Configure preview secrets with:
+
+```bash
+npx wrangler secret put SUPABASE_URL --env preview
+npx wrangler secret put SUPABASE_KEY --env preview
+```
 
 ## Smoke test
 
@@ -182,10 +205,14 @@ It needs a reachable Supabase instance (local or cloud) with email confirmation 
 
 ## CI
 
-GitHub Actions runs two jobs on every push and PR to `master`:
+GitHub Actions runs validation on every push and PR to `main`, deploys a preview Worker for same-repository pull requests, and deploys production after a push to `main` once the `production` environment approval is granted:
 
-- **ci** — lint, `astro check` and build. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets for the build step.
-- **smoke** — starts a local Supabase via the Supabase CLI, builds, serves the production preview on the Cloudflare runtime and runs `npm run smoke` against it. No secrets required.
+- **ci** — lint, `astro check` and build without production credentials.
+- **smoke** — starts a local Supabase via the Supabase CLI, runs `npm run smoke:storage` to verify expense-record RLS, then builds, serves the production preview on the Cloudflare runtime and runs `npm run smoke`. No secrets required.
+- **deploy-preview** — applies pending preview Supabase migrations, then deploys `expensecat-preview` with `npx wrangler deploy --env preview` for same-repository pull requests.
+- **deploy-production** — applies pending production Supabase migrations, then deploys `expensecat` with `npx wrangler deploy` after the `production` environment approval.
+
+The GitHub `preview` and `production` environments must define `SUPABASE_URL` and `SUPABASE_KEY` for their respective Supabase projects. They also need `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` so CI can apply pending migrations before deploying the Worker, plus `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Configure the `production` environment with required reviewers before enabling production deploys.
 
 ## License
 

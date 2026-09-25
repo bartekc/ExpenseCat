@@ -2,7 +2,8 @@
 // Zero dependencies on purpose. Run against a live server: BASE_URL=http://localhost:4321 node scripts/smoke.mjs
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
-const email = `smoke-${Date.now()}@example.com`;
+const expectUnconfigured = process.env.EXPECT_UNCONFIGURED === "true";
+const email = process.env.SMOKE_EMAIL ?? `smoke-${Date.now()}@example.com`;
 const password = "Smoke-Test-Passw0rd!";
 const jar = new Map();
 
@@ -35,7 +36,7 @@ async function request(path, { method = "GET", form } = {}) {
   return { status: response.status, location: response.headers.get("location") ?? "" };
 }
 
-const steps = [
+const configuredSteps = [
   ["home renders", () => request("/"), { status: 200 }],
   ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
   [
@@ -57,6 +58,18 @@ const steps = [
   ["signout clears session", () => request("/api/auth/signout", { method: "POST" }), { status: 302, location: "/" }],
   ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
 ];
+
+const missingSecretSteps = [
+  ["home renders", () => request("/"), { status: 200 }],
+  ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+  [
+    "signup reports missing Supabase runtime secrets",
+    () => request("/api/auth/signup", { method: "POST", form: { email, password } }),
+    { status: 302, location: "/auth/signup?error=Supabase%20is%20not%20configured" },
+  ],
+];
+
+const steps = expectUnconfigured ? missingSecretSteps : configuredSteps;
 
 let failed = 0;
 for (const [name, run, expected] of steps) {
