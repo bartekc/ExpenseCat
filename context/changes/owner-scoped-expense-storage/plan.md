@@ -159,7 +159,7 @@ The migration is additive and has no existing expense records to backfill. CI de
 
 #### Automated
 
-- [x] 2.1 Storage smoke proves owner-only CRUD
+- [x] 2.1 Storage smoke proves owner-only CRUD — 7d0a724
 - [x] 2.2 Lint passes
 - [x] 2.3 Astro type checking passes
 - [x] 2.4 Production build succeeds
@@ -174,5 +174,5 @@ The migration is additive and has no existing expense records to backfill. CI de
 
 #### Manual
 
-- [ ] 3.4 Preview deployment migrates before Worker deployment
-- [ ] 3.5 Production deployment migrates before Worker deployment
+- [x] 3.4 Preview deployment migrates before Worker deployment
+- [x] 3.5 Production deployment migrates before Worker deployment
