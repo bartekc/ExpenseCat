@@ -174,5 +174,5 @@ The migration is additive and has no existing expense records to backfill. CI de
 
 #### Manual
 
-- [x] 3.4 Preview deployment migrates before Worker deployment
-- [x] 3.5 Production deployment migrates before Worker deployment
+- [x] 3.4 Preview deployment migrates before Worker deployment — 5e68395
+- [x] 3.5 Production deployment migrates before Worker deployment — 5e68395
