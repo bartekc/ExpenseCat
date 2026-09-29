@@ -75,6 +75,14 @@ async function run() {
   if (!ownerExpense?.id || ownerExpense.owner_id !== owner.id) {
     fail(`owner insert returned an invalid record: ${JSON.stringify(ownerInsert.body)}`);
   }
+  if (
+    ownerExpense.transaction_date !== null ||
+    ownerExpense.amount !== null ||
+    ownerExpense.title !== null ||
+    ownerExpense.currency !== "PLN"
+  ) {
+    fail("legacy empty owner row did not preserve nullable transaction fields and PLN default");
+  }
 
   const otherInsert = await expensesRequest(other, "", { method: "POST", body: JSON.stringify([{}]) });
   expectStatus(otherInsert, 201, "other insert");
@@ -134,6 +142,68 @@ async function run() {
     fail(`owner update did not affect its record: ${JSON.stringify(ownerUpdate.body)}`);
   }
 
+  const transaction = { transaction_date: "2026-09-28", amount: "-123456789.12", title: "Synthetic payment" };
+  const transactionInsert = await expensesRequest(owner, "", {
+    method: "POST",
+    body: JSON.stringify([transaction]),
+  });
+  expectStatus(transactionInsert, 201, "owner transaction insert");
+  const savedTransaction = transactionInsert.body?.[0];
+  if (
+    !savedTransaction?.id ||
+    savedTransaction.owner_id !== owner.id ||
+    savedTransaction.transaction_date !== transaction.transaction_date ||
+    Number(savedTransaction.amount) !== Number(transaction.amount) ||
+    savedTransaction.title !== transaction.title ||
+    savedTransaction.currency !== "PLN"
+  ) {
+    fail(`transaction fields or types were not preserved: ${JSON.stringify(transactionInsert.body)}`);
+  }
+
+  const duplicate = await expensesRequest(owner, "", {
+    method: "POST",
+    body: JSON.stringify([transaction]),
+  });
+  expectStatus(duplicate, 409, "same-owner duplicate transaction");
+
+  const otherOwnerSameTransaction = await expensesRequest(other, "", {
+    method: "POST",
+    body: JSON.stringify([transaction]),
+  });
+  expectStatus(otherOwnerSameTransaction, 201, "other owner may use same transaction key");
+  const otherTransaction = otherOwnerSameTransaction.body?.[0];
+
+  for (const [label, invalid] of [
+    ["positive amount", { ...transaction, amount: "1.00", title: "Positive amount" }],
+    ["zero amount", { ...transaction, amount: "0.00", title: "Zero amount" }],
+    ["blank title", { ...transaction, title: "   " }],
+    ["non-PLN currency", { ...transaction, currency: "EUR", title: "Other currency" }],
+    ["amount precision", { ...transaction, amount: "-10000000000.00", title: "Excess amount" }],
+    ["invalid date", { ...transaction, transaction_date: "2026-02-30", title: "Bad date" }],
+  ]) {
+    const rejected = await expensesRequest(owner, "", {
+      method: "POST",
+      body: JSON.stringify([invalid]),
+    });
+    if (rejected.status < 400) fail(`${label} was accepted by the database`);
+  }
+
+  const ownerTransactions = await expensesRequest(owner, "?select=id,transaction_date,amount,title,currency");
+  expectStatus(ownerTransactions, 200, "owner transaction read");
+  if (ownerTransactions.body?.length !== 2) fail("duplicate or invalid insert changed owner row count");
+
+  const otherCannotSeeTransaction = await expensesRequest(other, `?id=eq.${savedTransaction.id}&select=id`);
+  expectStatus(otherCannotSeeTransaction, 200, "cross-owner transaction read");
+  expectEmpty(otherCannotSeeTransaction, "cross-owner transaction read");
+
+  const transactionDelete = await expensesRequest(owner, `?id=eq.${savedTransaction.id}`, { method: "DELETE" });
+  expectStatus(transactionDelete, 200, "owner transaction cleanup");
+  if (transactionDelete.body?.length !== 1) fail("owner transaction cleanup did not delete its record");
+
+  const otherTransactionDelete = await expensesRequest(other, `?id=eq.${otherTransaction.id}`, { method: "DELETE" });
+  expectStatus(otherTransactionDelete, 200, "other transaction cleanup");
+  if (otherTransactionDelete.body?.length !== 1) fail("other transaction cleanup did not delete its record");
+
   const otherDelete = await expensesRequest(other, `?id=eq.${otherExpense.id}`, { method: "DELETE" });
   expectStatus(otherDelete, 200, "other owner delete");
   if (otherDelete.body?.length !== 1) {
@@ -146,7 +216,7 @@ async function run() {
     fail(`owner cleanup did not delete its record: ${JSON.stringify(ownerDelete.body)}`);
   }
 
-  console.log("PASS  expense storage enforces owner-only CRUD");
+  console.log("PASS  expense storage enforces schema, uniqueness, and owner-only CRUD");
 }
 
 run().catch((error) => {
