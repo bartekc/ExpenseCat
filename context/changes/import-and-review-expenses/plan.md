@@ -231,23 +231,23 @@ Add a new forward-only migration; do not edit the already deployed F-01 migratio
 
 #### Automated
 
-- [x] 2.1 `npm run test:unit` and the expanded `npm run smoke` pass against the built app and local Supabase.
-- [x] 2.2 `npm run smoke:storage` still passes, including owner-only CRUD and duplicate constraints.
-- [x] 2.3 `npm run lint`, `npx astro check`, and `npm run build` pass.
+- [x] 2.1 `npm run test:unit` and the expanded `npm run smoke` pass against the built app and local Supabase. — 2a2e2a1
+- [x] 2.2 `npm run smoke:storage` still passes, including owner-only CRUD and duplicate constraints. — 2a2e2a1
+- [x] 2.3 `npm run lint`, `npx astro check`, and `npm run build` pass. — 2a2e2a1
 
 #### Manual
 
-- [x] 2.4 As one signed-in user, importing the same synthetic file twice reports zero new rows on the second import; another signed-in user cannot see those rows and can import their own copy.
+- [x] 2.4 As one signed-in user, importing the same synthetic file twice reports zero new rows on the second import; another signed-in user cannot see those rows and can import their own copy. — 2a2e2a1
 
 ### Phase 3: Dashboard upload and newest-first review
 
 #### Automated
 
-- [ ] 3.1 `npm run test:unit` and the expanded `npm run smoke` pass.
-- [ ] 3.2 `npm run lint`, `npx astro check`, and `npm run build` pass.
+- [x] 3.1 `npm run test:unit` and the expanded `npm run smoke` pass.
+- [x] 3.2 `npm run lint`, `npx astro check`, and `npm run build` pass.
 
 #### Manual
 
-- [ ] 3.3 Importing the attached private export through the dashboard shows 64 newly saved expenses on a fresh account, Polish titles render correctly, and the list is newest first across pages.
-- [ ] 3.4 Re-importing that file reports 0 imported and 64 duplicates; invalid and non-negative synthetic rows show the agreed skip feedback without removing valid rows.
-- [ ] 3.5 A second account cannot review the first account's expenses; upload errors, empty state, keyboard controls, and narrow-screen layout are usable.
+- [x] 3.3 Importing the attached private export through the dashboard shows 64 newly saved expenses on a fresh account, Polish titles render correctly, and the list is newest first across pages.
+- [x] 3.4 Re-importing that file reports 0 imported and 64 duplicates; invalid and non-negative synthetic rows show the agreed skip feedback without removing valid rows.
+- [x] 3.5 A second account cannot review the first account's expenses; upload errors, empty state, keyboard controls, and narrow-screen layout are usable.

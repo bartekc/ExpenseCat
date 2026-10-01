@@ -38,10 +38,12 @@ async function request(session, path, { method = "GET", form, file, origin = ORI
 
   const response = await fetch(BASE_URL + path, { method, redirect: "manual", headers, body });
   session.store(response);
+  const isJson = response.headers.get("content-type")?.includes("application/json");
   return {
     status: response.status,
     location: response.headers.get("location") ?? "",
-    data: response.headers.get("content-type")?.includes("application/json") ? await response.json() : null,
+    data: isJson ? await response.json() : null,
+    html: isJson ? "" : await response.text(),
   };
 }
 
@@ -100,6 +102,7 @@ async function signUpAndSignIn(session, label) {
     }),
     { status: 302, location: "/" },
   );
+  return email;
 }
 
 async function run() {
@@ -130,8 +133,29 @@ async function run() {
     return;
   }
 
-  await signUpAndSignIn(owner, "owner");
-  check("dashboard renders for signed-in user", await request(owner, "/dashboard"), { status: 200 });
+  const ownerEmail = await signUpAndSignIn(owner, "owner");
+  const dashboard = check("dashboard renders for signed-in user", await request(owner, "/dashboard"), {
+    status: 200,
+  });
+  assert(
+    "dashboard exposes labeled CSV import, review state, and account controls",
+    dashboard.html.includes(ownerEmail) &&
+      dashboard.html.includes('id="expense-csv"') &&
+      dashboard.html.includes('type="file"') &&
+      dashboard.html.includes("Import expenses") &&
+      dashboard.html.includes("Saved expenses") &&
+      dashboard.html.includes("Loading expenses") &&
+      dashboard.html.includes("Sign out"),
+  );
+  const initiallyEmpty = check("new account review loads empty", await request(owner, "/api/expenses?page=1"), {
+    status: 200,
+  });
+  assert(
+    "new account has an empty review page",
+    initiallyEmpty.data?.total === 0 &&
+      initiallyEmpty.data.expenses?.length === 0 &&
+      initiallyEmpty.data.totalPages === 0,
+  );
   check(
     "cross-origin import denied",
     await request(owner, "/api/expenses/import", {
@@ -157,6 +181,7 @@ async function run() {
       first.data.nonExpense === 1 &&
       first.data.invalid === 1 &&
       first.data.invalidRows?.[0]?.row === 55 &&
+      first.data.invalidRows?.[0]?.reason === "Invalid transaction date" &&
       first.data.detailsTruncated === false,
   );
 
@@ -192,13 +217,18 @@ async function run() {
   const secondPage = check("review page two loads", await request(owner, "/api/expenses?page=2"), { status: 200 });
   assert("review reaches remaining records", secondPage.data?.expenses?.length === 2);
 
-  check(
+  const wrongHeader = check(
     "wrong-header CSV rejected",
     await request(owner, "/api/expenses/import", {
       method: "POST",
       file: "Wrong;Kwota;Tytul\n2026-09-29;-1.00;Synthetic invalid file",
     }),
     { status: 400 },
+  );
+  assert(
+    "file-level error is separate from row skips",
+    wrongHeader.data?.error === "CSV header must be Data_operacji;Kwota;Tytul" &&
+      wrongHeader.data?.invalidRows === undefined,
   );
   const afterInvalid = check("review after invalid file loads", await request(owner, "/api/expenses?page=1"), {
     status: 200,
