@@ -219,25 +219,25 @@ Add a new forward-only migration; do not edit the already deployed F-01 migratio
 
 #### Automated
 
-- [x] 1.1 `npm run test:unit` passes the synthetic encoding, parsing, classification, and limit cases.
-- [x] 1.2 With local Supabase running, `npm run smoke:storage` passes schema, uniqueness, and owner-isolation checks.
-- [x] 1.3 `npm run lint`, `npx astro check`, and `npm run build` pass.
+- [x] 1.1 `npm run test:unit` passes the synthetic encoding, parsing, classification, and limit cases. — b646f59
+- [x] 1.2 With local Supabase running, `npm run smoke:storage` passes schema, uniqueness, and owner-isolation checks. — b646f59
+- [x] 1.3 `npm run lint`, `npx astro check`, and `npm run build` pass. — b646f59
 
 #### Manual
 
-- [x] 1.4 A local parser-only check of the private attached export identifies 64 valid negative PLN candidates and readable Polish characters without persisting or committing the source file.
+- [x] 1.4 A local parser-only check of the private attached export identifies 64 valid negative PLN candidates and readable Polish characters without persisting or committing the source file. — b646f59
 
 ### Phase 2: Authenticated import and review APIs
 
 #### Automated
 
-- [ ] 2.1 `npm run test:unit` and the expanded `npm run smoke` pass against the built app and local Supabase.
-- [ ] 2.2 `npm run smoke:storage` still passes, including owner-only CRUD and duplicate constraints.
-- [ ] 2.3 `npm run lint`, `npx astro check`, and `npm run build` pass.
+- [x] 2.1 `npm run test:unit` and the expanded `npm run smoke` pass against the built app and local Supabase.
+- [x] 2.2 `npm run smoke:storage` still passes, including owner-only CRUD and duplicate constraints.
+- [x] 2.3 `npm run lint`, `npx astro check`, and `npm run build` pass.
 
 #### Manual
 
-- [ ] 2.4 As one signed-in user, importing the same synthetic file twice reports zero new rows on the second import; another signed-in user cannot see those rows and can import their own copy.
+- [x] 2.4 As one signed-in user, importing the same synthetic file twice reports zero new rows on the second import; another signed-in user cannot see those rows and can import their own copy.
 
 ### Phase 3: Dashboard upload and newest-first review
 

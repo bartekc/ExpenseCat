@@ -3,7 +3,7 @@ project: ExpenseCat
 version: 1
 status: draft
 created: 2026-09-23
-updated: 2026-09-28
+updated: 2026-09-29
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -42,7 +42,7 @@ The project owner spends too much time combining account and card transactions w
 | ID | Change ID | Outcome (user can …) | Prerequisites | PRD refs | Status |
 | --- | --- | --- | --- | --- | --- |
 | F-01 | owner-scoped-expense-storage | establish the smallest verified contract for persisting expense records so each signed-in user can access only their own records across sessions | — | Access Control; Non-Functional Requirements (financial-data isolation and persistence across sign-in sessions) | done |
-| S-01 | import-and-review-expenses | A signed-in user can import a supported CSV and review the saved transactions, with clear feedback when a file cannot be processed. | F-01 | US-01, FR-001, FR-002, FR-003, FR-004 | blocked |
+| S-01 | import-and-review-expenses | A signed-in user can import a supported CSV and review the saved transactions, with clear feedback when a file cannot be processed. | F-01 | US-01, FR-001, FR-002, FR-003, FR-004 | in-progress |
 | S-02 | view-monthly-category-breakdown | A signed-in user can see imported transactions with assigned categories and a pie chart showing each category’s share of current-month expenses. | S-01 | US-01, FR-005, FR-007, Non-Functional Requirements (chart readability) | blocked |
 | S-03 | correct-expense-category | A signed-in user can change a transaction’s category, see the current-month chart update, and have the corrected keyword/category association used on future imports. | S-02 | US-01, FR-005, FR-006, FR-007 | proposed |
 
@@ -85,7 +85,7 @@ What's already in place in the codebase as of `2026-09-23` (auto-researched and 
 - **Unknowns:**
   - Which CSV headers and date/amount conventions define the single supported source? — Owner: user. Block: yes.
 - **Risk:** No sample or format is specified, so a parser could appear complete while failing on the user’s actual export; existing account access should be reused, not rebuilt.
-- **Status:** blocked
+- **Status:** in-progress
 
 ### S-02: View monthly category breakdown
 
