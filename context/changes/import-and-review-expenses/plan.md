@@ -243,11 +243,11 @@ Add a new forward-only migration; do not edit the already deployed F-01 migratio
 
 #### Automated
 
-- [x] 3.1 `npm run test:unit` and the expanded `npm run smoke` pass.
-- [x] 3.2 `npm run lint`, `npx astro check`, and `npm run build` pass.
+- [x] 3.1 `npm run test:unit` and the expanded `npm run smoke` pass. — 185f89c
+- [x] 3.2 `npm run lint`, `npx astro check`, and `npm run build` pass. — 185f89c
 
 #### Manual
 
-- [x] 3.3 Importing the attached private export through the dashboard shows 64 newly saved expenses on a fresh account, Polish titles render correctly, and the list is newest first across pages.
-- [x] 3.4 Re-importing that file reports 0 imported and 64 duplicates; invalid and non-negative synthetic rows show the agreed skip feedback without removing valid rows.
-- [x] 3.5 A second account cannot review the first account's expenses; upload errors, empty state, keyboard controls, and narrow-screen layout are usable.
+- [x] 3.3 Importing the attached private export through the dashboard shows 64 newly saved expenses on a fresh account, Polish titles render correctly, and the list is newest first across pages. — 185f89c
+- [x] 3.4 Re-importing that file reports 0 imported and 64 duplicates; invalid and non-negative synthetic rows show the agreed skip feedback without removing valid rows. — 185f89c
+- [x] 3.5 A second account cannot review the first account's expenses; upload errors, empty state, keyboard controls, and narrow-screen layout are usable. — 185f89c
