@@ -2,6 +2,7 @@ import Papa from "papaparse";
 
 export const MAX_CSV_BYTES = 2 * 1024 * 1024;
 export const MAX_CSV_ROWS = 10_000;
+export const MAX_TITLE_BYTES = 1024;
 
 const HEADER = ["Data_operacji", "Kwota", "Tytul"];
 const MAX_AMOUNT = 9_999_999_999.99;
@@ -73,6 +74,11 @@ function classifyRow(cells: string[], row: number, result: ParsedExpenseCsv): vo
 
   if (!title) {
     result.invalid.push({ row, reason: "Missing title" });
+    return;
+  }
+
+  if (new TextEncoder().encode(title).byteLength > MAX_TITLE_BYTES) {
+    result.invalid.push({ row, reason: "Title exceeds 1024 UTF-8 bytes" });
     return;
   }
 

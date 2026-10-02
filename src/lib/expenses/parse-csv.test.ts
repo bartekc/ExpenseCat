@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExpenseCsvFileError, MAX_CSV_BYTES, parseExpenseCsv } from "./parse-csv";
+import { ExpenseCsvFileError, MAX_CSV_BYTES, MAX_TITLE_BYTES, parseExpenseCsv } from "./parse-csv";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 const header = "Data_operacji;Kwota;Tytul";
@@ -62,6 +62,30 @@ describe("parseExpenseCsv", () => {
     expect(parsed.candidates.map((candidate) => candidate.row)).toEqual([4, 5, 10]);
     expect(parsed.invalid.map(({ row }) => row)).toEqual([2, 3, 6, 7, 8, 9]);
     expect(parsed.invalid.map(({ reason }) => reason).join(" ")).not.toContain("Private");
+  });
+
+  it("enforces the trimmed title limit in UTF-8 bytes while keeping valid rows", () => {
+    const asciiAtLimit = "A".repeat(MAX_TITLE_BYTES);
+    const polishAtLimit = "ż".repeat(MAX_TITLE_BYTES / 2);
+    const csv = [
+      header,
+      `2026-09-28;-1.00; ${asciiAtLimit} `,
+      `2026-09-29;-2.00;${"A".repeat(MAX_TITLE_BYTES + 1)}`,
+      `2026-09-30;-3.00;${polishAtLimit}`,
+      `2026-10-01;-4.00;${polishAtLimit}ż`,
+      "2026-10-02;-5.00;Later valid row",
+    ].join("\n");
+
+    const parsed = parseExpenseCsv(encode(csv));
+    expect(parsed.candidates.map(({ row, title }) => ({ row, title }))).toEqual([
+      { row: 2, title: asciiAtLimit },
+      { row: 4, title: polishAtLimit },
+      { row: 6, title: "Later valid row" },
+    ]);
+    expect(parsed.invalid).toEqual([
+      { row: 3, reason: "Title exceeds 1024 UTF-8 bytes" },
+      { row: 5, reason: "Title exceeds 1024 UTF-8 bytes" },
+    ]);
   });
 
   it("classifies positive and zero amounts separately from invalid rows", () => {

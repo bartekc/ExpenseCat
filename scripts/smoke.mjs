@@ -156,6 +156,48 @@ async function run() {
       initiallyEmpty.data.expenses?.length === 0 &&
       initiallyEmpty.data.totalPages === 0,
   );
+
+  const oversizedFile = check(
+    "oversized CSV file rejected",
+    await request(owner, "/api/expenses/import", {
+      method: "POST",
+      file: "x".repeat(2 * 1024 * 1024 + 1),
+    }),
+    { status: 413 },
+  );
+  assert("oversized file has a clear error", oversizedFile.data?.error === "CSV file exceeds 2 MiB");
+
+  let chunksSent = 0;
+  const oversizedStreamResponse = await fetch(BASE_URL + "/api/expenses/import", {
+    method: "POST",
+    redirect: "manual",
+    headers: {
+      Cookie: owner.cookies(),
+      Origin: ORIGIN,
+      "Content-Type": "multipart/form-data; boundary=synthetic",
+    },
+    body: new globalThis.ReadableStream({
+      pull(controller) {
+        if (chunksSent++ < 33) controller.enqueue(new Uint8Array(64 * 1024));
+        else controller.close();
+      },
+    }),
+    duplex: "half",
+  });
+  check(
+    "oversized streamed multipart body rejected",
+    { status: oversizedStreamResponse.status, location: oversizedStreamResponse.headers.get("location") ?? "" },
+    { status: 413 },
+  );
+  assert(
+    "streamed upload has a clear error",
+    (await oversizedStreamResponse.json()).error === "CSV upload exceeds allowed size",
+  );
+  const afterOversized = check("review after oversized uploads loads", await request(owner, "/api/expenses?page=1"), {
+    status: 200,
+  });
+  assert("oversized uploads made no writes", afterOversized.data?.total === 0);
+
   check(
     "cross-origin import denied",
     await request(owner, "/api/expenses/import", {
@@ -263,6 +305,30 @@ async function run() {
     status: 200,
   });
   assert("other import did not change owner count", ownerRead.data?.total === 53);
+
+  const titleLimitImport = check(
+    "CSV with overlong and valid titles imports",
+    await request(owner, "/api/expenses/import", {
+      method: "POST",
+      file: csvFile([`2026-10-01;-1.00;${"ż".repeat(513)}`, "2026-10-02;-2.00;Synthetic title limit survivor"]),
+    }),
+    { status: 200 },
+  );
+  assert(
+    "overlong title is skipped while valid row imports",
+    titleLimitImport.data?.imported === 1 &&
+      titleLimitImport.data.invalid === 1 &&
+      titleLimitImport.data.invalidRows?.[0]?.row === 2 &&
+      titleLimitImport.data.invalidRows?.[0]?.reason === "Title exceeds 1024 UTF-8 bytes",
+  );
+  const afterTitleLimit = check("review after title limit import loads", await request(owner, "/api/expenses?page=1"), {
+    status: 200,
+  });
+  assert(
+    "valid title was saved and overlong title made no write",
+    afterTitleLimit.data?.total === 54 &&
+      afterTitleLimit.data.expenses?.[0]?.title === "Synthetic title limit survivor",
+  );
 
   check("signout clears session", await request(owner, "/api/auth/signout", { method: "POST" }), {
     status: 302,

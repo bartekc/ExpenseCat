@@ -173,6 +173,29 @@ async function run() {
   expectStatus(otherOwnerSameTransaction, 201, "other owner may use same transaction key");
   const otherTransaction = otherOwnerSameTransaction.body?.[0];
 
+  const maxTitleTransaction = { ...transaction, amount: "-1.00", title: "A".repeat(1024) };
+  const maxTitleInsert = await expensesRequest(owner, "", {
+    method: "POST",
+    body: JSON.stringify([maxTitleTransaction]),
+  });
+  expectStatus(maxTitleInsert, 201, "1024-byte title insert");
+  const maxTitleExpense = maxTitleInsert.body?.[0];
+  if (!maxTitleExpense?.id || maxTitleExpense.title !== maxTitleTransaction.title) {
+    fail("1024-byte title was not stored intact");
+  }
+
+  const overlongTitleInsert = await expensesRequest(owner, "", {
+    method: "POST",
+    body: JSON.stringify([{ ...transaction, amount: "-2.00", title: "A".repeat(1025) }]),
+  });
+  if (
+    overlongTitleInsert.status !== 400 ||
+    overlongTitleInsert.body?.code !== "23514" ||
+    !overlongTitleInsert.body?.message?.includes("expenses_title_max_bytes")
+  ) {
+    fail(`1025-byte title did not violate the title constraint: ${JSON.stringify(overlongTitleInsert)}`);
+  }
+
   for (const [label, invalid] of [
     ["positive amount", { ...transaction, amount: "1.00", title: "Positive amount" }],
     ["zero amount", { ...transaction, amount: "0.00", title: "Zero amount" }],
@@ -188,9 +211,26 @@ async function run() {
     if (rejected.status < 400) fail(`${label} was accepted by the database`);
   }
 
+  for (const [label, title] of [
+    ["tab and newline title", "\t\n\r"],
+    ["non-breaking space and BOM title", "\u00a0\ufeff"],
+  ]) {
+    const rejected = await expensesRequest(owner, "", {
+      method: "POST",
+      body: JSON.stringify([{ ...transaction, amount: "-3.00", title }]),
+    });
+    if (
+      rejected.status !== 400 ||
+      rejected.body?.code !== "23514" ||
+      !rejected.body?.message?.includes("expenses_title_has_content")
+    ) {
+      fail(`${label} did not violate the title content constraint: ${JSON.stringify(rejected)}`);
+    }
+  }
+
   const ownerTransactions = await expensesRequest(owner, "?select=id,transaction_date,amount,title,currency");
   expectStatus(ownerTransactions, 200, "owner transaction read");
-  if (ownerTransactions.body?.length !== 2) fail("duplicate or invalid insert changed owner row count");
+  if (ownerTransactions.body?.length !== 3) fail("duplicate or invalid insert changed owner row count");
 
   const otherCannotSeeTransaction = await expensesRequest(other, `?id=eq.${savedTransaction.id}&select=id`);
   expectStatus(otherCannotSeeTransaction, 200, "cross-owner transaction read");
@@ -199,6 +239,10 @@ async function run() {
   const transactionDelete = await expensesRequest(owner, `?id=eq.${savedTransaction.id}`, { method: "DELETE" });
   expectStatus(transactionDelete, 200, "owner transaction cleanup");
   if (transactionDelete.body?.length !== 1) fail("owner transaction cleanup did not delete its record");
+
+  const maxTitleDelete = await expensesRequest(owner, `?id=eq.${maxTitleExpense.id}`, { method: "DELETE" });
+  expectStatus(maxTitleDelete, 200, "1024-byte title cleanup");
+  if (maxTitleDelete.body?.length !== 1) fail("1024-byte title cleanup did not delete its record");
 
   const otherTransactionDelete = await expensesRequest(other, `?id=eq.${otherTransaction.id}`, { method: "DELETE" });
   expectStatus(otherTransactionDelete, 200, "other transaction cleanup");
