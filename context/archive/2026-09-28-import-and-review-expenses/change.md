@@ -1,10 +1,10 @@
 ---
 change_id: import-and-review-expenses
 title: Import and review expenses
-status: impl_reviewed
+status: archived
 created: 2026-09-28
 updated: 2026-10-02
-archived_at: null
+archived_at: 2026-10-02T21:26:05Z
 ---
 
 ## Notes
