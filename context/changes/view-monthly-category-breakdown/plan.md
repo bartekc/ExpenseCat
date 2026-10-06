@@ -332,14 +332,14 @@ Read-time matching scales with owned expenses and rules. During verification ins
 
 #### Automated
 
-- [x] 1.1 New additive migrations apply locally without resetting data: `npx supabase migration up --local`.
-- [x] 1.2 Expanded `npm run smoke:storage` passes catalogue, owner-isolation, normalized-rule uniqueness, matcher, recalculation, and 1,001-row aggregate cases.
-- [x] 1.3 `npm run test:unit` passes fixed-catalogue checks and all existing parser/import tests.
+- [x] 1.1 New additive migrations apply locally without resetting data: `npx supabase migration up --local`. — 40e6011
+- [x] 1.2 Expanded `npm run smoke:storage` passes catalogue, owner-isolation, normalized-rule uniqueness, matcher, recalculation, and 1,001-row aggregate cases. — 40e6011
+- [x] 1.3 `npm run test:unit` passes fixed-catalogue checks and all existing parser/import tests. — 40e6011
 
 #### Manual
 
-- [x] 1.4 Review the migration and synthetic classification results against the agreed ten labels, tie behavior, and no-expense-backfill contract.
-- [x] 1.5 Inspect a representative local 10,000-expense/100-rule query plan and record its observed runtime and result counts.
+- [x] 1.4 Review the migration and synthetic classification results against the agreed ten labels, tie behavior, and no-expense-backfill contract. — 40e6011
+- [x] 1.5 Inspect a representative local 10,000-expense/100-rule query plan and record its observed runtime and result counts. — 40e6011
 
 ### Phase 2: Authenticated APIs and monthly summary
 
