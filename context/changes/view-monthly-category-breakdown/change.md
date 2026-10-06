@@ -1,7 +1,7 @@
 ---
 change_id: view-monthly-category-breakdown
 title: View monthly category breakdown
-status: impl_reviewed
+status: implementing
 created: 2026-10-05
 updated: 2026-10-06
 archived_at: null

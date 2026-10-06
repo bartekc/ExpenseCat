@@ -203,6 +203,55 @@ It needs a reachable Supabase instance (local or cloud) with email confirmation 
 
 > **Note:** this script exists primarily to guard the development of the starter itself — it is a fast sanity check that dependency upgrades did not break the build, the Cloudflare adapter or the Supabase auth flow. It is **not** a substitute for a real test suite. Once you build your own product on top of this starter, add proper tests (unit, integration, end-to-end) suited to your application.
 
+## Category rules and monthly API
+
+Signed-in users can read categorized expenses using `GET /api/expenses?page=N`.
+The existing all-date newest-first list and 50-row pagination remain unchanged;
+each row adds `category_code`, `needs_review`, and `review_reason` (`unmatched`,
+`ambiguous`, or null). Owner IDs are never returned. Re-imports skip duplicate
+transactions without changing stored fields or rules.
+
+`GET /api/category-rules?page=N` returns private rules, all ten fixed category
+descriptors, and `page`, `pageSize` (50), `total`, and `totalPages`. Rules sort by
+normalized keyword, then ID. Create with `POST /api/category-rules`, update with
+`PATCH /api/category-rules/:id`, and delete with `DELETE /api/category-rules/:id`.
+POST/PATCH accept only `{ "keyword": "merchant phrase", "category_code": "groceries" }`.
+Send same-origin `Origin` and `Content-Type: application/json`; the body limit is
+16 KiB and the raw and database-normalized keyword limits are 1,024 UTF-8 bytes.
+DELETE accepts no body. Malformed inputs return 400, oversized bodies 413,
+origin denials 403, and normalized duplicates 409 with guidance to edit the
+existing rule. Missing and foreign-owned IDs both return 404. All responses are
+`Cache-Control: no-store`.
+
+Matching is a case-insensitive literal substring after NFC normalization and
+whitespace collapsing; accents stay significant. The longest normalized keyword
+wins. Equal longest matches for different categories produce Other/ambiguous;
+no match produces Other/unmatched. A deliberate Other rule has no review flag.
+Database constraints enforce duplicate rules, including concurrent requests.
+Rule edits recalculate existing and future expenses on the next read, without
+backfills or cached expense categories. Each owner's rules affect only their own
+expenses, and rules persist across sign-out/sign-in.
+
+`GET /api/expenses/summary` takes no filters. It derives the current calendar
+month in **Europe/Warsaw** from the current instant and aggregates by transaction
+date, from `period.startDate` inclusive to `period.endDateExclusive` exclusive.
+The response includes `period` (`month`, both bounds, `timeZone`), `currency: PLN`,
+`totalCents`, `expenseCount`, `needsReviewCount`, and ten ordered category totals
+with `code`, `label`, `totalCents`, `expenseCount`, and `needsReviewCount`.
+Cent totals are exact non-negative decimal strings, including above JavaScript's
+safe integer limit. Database aggregation covers the entire month, not just the
+visible expense page. Empty months return valid zero totals; malformed service
+results are errors, not fabricated empty data. Authentication/unavailable
+service/query failures follow 401/503/500 respectively. The rule editor and
+chart UI are delivered separately in phase 3.
+
+The HTTP smoke gate retains existing auth/import/pagination assertions and adds
+isolated synthetic sessions for category CRUD, owner isolation, mutation/body
+limits, duplicates/races, live recalculation and persistence. New expense dates
+come from the reported current Warsaw period, including neighboring-month
+exclusions and more than one review/rule page. Unit tests independently check
+UTC/Warsaw month boundaries, leap years and integer-safe money presentation.
+
 ## CI
 
 GitHub Actions runs validation on every push and PR to `main`, deploys a preview Worker for same-repository pull requests, and deploys production after a push to `main` once the `production` environment approval is granted:
