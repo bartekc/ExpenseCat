@@ -1,4 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import CategoryRulesPanel from "./CategoryRulesPanel";
+import MonthlyCategoryBreakdown from "./MonthlyCategoryBreakdown";
+import { EXPENSE_CATEGORIES } from "@/lib/expenses/categories";
+import { isExpensePage, isRecord } from "@/lib/expenses/contracts";
+import { isMonthlySummary } from "@/lib/expenses/monthly";
+import { isCategoryRulePage } from "@/lib/expenses/rules";
 
 interface InvalidRow {
   row: number;
@@ -12,26 +18,6 @@ interface ImportResult {
   invalid: number;
   invalidRows: InvalidRow[];
   detailsTruncated: boolean;
-}
-
-interface Expense {
-  id: string;
-  transaction_date: string;
-  amount: string | number;
-  title: string;
-  currency: "PLN";
-}
-
-interface ExpensePage {
-  expenses: Expense[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function parseResponse(text: string): Record<string, unknown> | null {
@@ -62,24 +48,41 @@ function isImportResult(value: Record<string, unknown> | null): value is Record<
   );
 }
 
-function isExpensePage(value: Record<string, unknown> | null): value is Record<string, unknown> & ExpensePage {
-  return (
-    value !== null &&
-    typeof value.page === "number" &&
-    typeof value.pageSize === "number" &&
-    typeof value.total === "number" &&
-    typeof value.totalPages === "number" &&
-    Array.isArray(value.expenses) &&
-    value.expenses.every(
-      (expense: unknown) =>
-        isRecord(expense) &&
-        typeof expense.id === "string" &&
-        typeof expense.transaction_date === "string" &&
-        (typeof expense.amount === "string" || typeof expense.amount === "number") &&
-        typeof expense.title === "string" &&
-        expense.currency === "PLN",
-    )
-  );
+function useApiResource<T>(url: string, revision: number, validate: (value: unknown) => value is T, fallback: string) {
+  const key = `${url}:${revision}`;
+  const [loaded, setLoaded] = useState<{ key: string; data: T | null; error: string | null } | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(url, {
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const body = parseResponse(await response.text());
+        if (!response.ok) throw new Error(responseError(body, fallback));
+        if (!validate(body)) throw new Error(fallback);
+        if (!controller.signal.aborted) setLoaded({ key, data: body, error: null });
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setLoaded({ key, data: null, error: error instanceof Error ? error.message : fallback });
+        }
+      }
+    })();
+    return () => {
+      controller.abort();
+    };
+  }, [url, key, validate, fallback]);
+
+  // A changed request immediately hides the previous result, even before effect
+  // cleanup. Cleanup prevents late responses from superseded reads being used.
+  return {
+    data: loaded?.key === key ? loaded.data : null,
+    error: loaded?.key === key ? loaded.error : null,
+    loading: loaded?.key !== key,
+  };
 }
 
 function uploadCsv(file: File, onProgress: (percent: number | null) => void): Promise<ImportResult> {
@@ -115,46 +118,48 @@ function formatAmount(amount: string | number): string {
 export default function ExpenseImportReview() {
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const importPending = useRef(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [page, setPage] = useState(1);
   const [revision, setRevision] = useState(0);
-  const [expensePage, setExpensePage] = useState<ExpensePage | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
+  const [rulesPage, setRulesPage] = useState(1);
+  const [rulesRevision, setRulesRevision] = useState(0);
+  const [summaryRevision, setSummaryRevision] = useState(0);
+  const {
+    data: expensePage,
+    loading,
+    error: listError,
+  } = useApiResource(`/api/expenses?page=${page}`, revision, isExpensePage, "Expenses could not be loaded.");
+  const rules = useApiResource(
+    `/api/category-rules?page=${rulesPage}`,
+    rulesRevision,
+    isCategoryRulePage,
+    "Category rules could not be loaded.",
+  );
+  const summary = useApiResource(
+    "/api/expenses/summary",
+    summaryRevision,
+    isMonthlySummary,
+    "Monthly summary could not be loaded.",
+  );
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    void (async () => {
-      try {
-        const response = await fetch(`/api/expenses?page=${page}`, {
-          credentials: "same-origin",
-          signal: controller.signal,
-        });
-        const body = parseResponse(await response.text());
-        if (!response.ok) throw new Error(responseError(body, "Expenses could not be loaded."));
-        if (!isExpensePage(body)) throw new Error("The expense list could not be read.");
-        if (!controller.signal.aborted) setExpensePage(body);
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setListError(error instanceof Error ? error.message : "Expenses could not be loaded.");
-          setExpensePage(null);
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    })();
-
+    function restoreSummary() {
+      if (document.visibilityState === "visible") setSummaryRevision((current) => current + 1);
+    }
+    window.addEventListener("focus", restoreSummary);
+    document.addEventListener("visibilitychange", restoreSummary);
     return () => {
-      controller.abort();
+      window.removeEventListener("focus", restoreSummary);
+      document.removeEventListener("visibilitychange", restoreSummary);
     };
-  }, [page, revision]);
+  }, []);
 
   async function handleImport(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (importing) return;
+    if (importPending.current) return;
     setFileError(null);
     setResult(null);
 
@@ -167,27 +172,39 @@ export default function ExpenseImportReview() {
       return;
     }
 
+    importPending.current = true;
     setImporting(true);
     setProgress(0);
     try {
       const imported = await uploadCsv(file, setProgress);
       setResult(imported);
-      setLoading(true);
-      setListError(null);
       setPage(1);
       setRevision((current) => current + 1);
+      setSummaryRevision((current) => current + 1);
     } catch (error) {
       setFileError(error instanceof Error ? error.message : "CSV import failed. Please try again.");
     } finally {
+      importPending.current = false;
       setImporting(false);
       setProgress(null);
     }
   }
 
   function showPage(nextPage: number) {
-    setLoading(true);
-    setListError(null);
     setPage(nextPage);
+    setRevision((current) => current + 1);
+  }
+
+  function showRulesPage(nextPage: number) {
+    setRulesPage(nextPage);
+    setRulesRevision((current) => current + 1);
+  }
+
+  function refreshAfterRule(deleted: boolean) {
+    if (deleted && rules.data?.rules.length === 1 && rulesPage > 1) setRulesPage((current) => current - 1);
+    setRulesRevision((current) => current + 1);
+    setRevision((current) => current + 1);
+    setSummaryRevision((current) => current + 1);
   }
 
   return (
@@ -293,8 +310,28 @@ export default function ExpenseImportReview() {
         )}
       </section>
 
+      <MonthlyCategoryBreakdown
+        summary={summary.data}
+        loading={summary.loading}
+        error={summary.error}
+        onRetry={() => {
+          setSummaryRevision((current) => current + 1);
+        }}
+      />
+      <CategoryRulesPanel
+        rulePage={rules.data}
+        loading={rules.loading}
+        error={rules.error}
+        onRetry={() => {
+          setRulesRevision((current) => current + 1);
+        }}
+        onPage={showRulesPage}
+        onSaved={refreshAfterRule}
+      />
+
       <section
         aria-labelledby="expenses-heading"
+        aria-busy={loading}
         className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-xl sm:p-6"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -303,15 +340,29 @@ export default function ExpenseImportReview() {
           </h2>
           {expensePage && <p className="text-sm text-blue-100/70">{expensePage.total} total</p>}
         </div>
+        <p className="mt-2 text-sm text-blue-100/70">
+          All dates · newest first. Category rules apply to every saved expense.
+        </p>
         {loading && (
           <p role="status" className="mt-5 text-sm text-blue-100/80">
             Loading expenses…
           </p>
         )}
         {!loading && listError && (
-          <p role="alert" className="mt-5 rounded-lg border border-red-300/40 bg-red-950/40 p-3 text-sm text-red-100">
-            {listError}
-          </p>
+          <div className="mt-5">
+            <p role="alert" className="rounded-lg border border-red-300/40 bg-red-950/40 p-3 text-sm text-red-100">
+              {listError}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setRevision((current) => current + 1);
+              }}
+              className="expense-secondary-button mt-3"
+            >
+              Retry expenses
+            </button>
+          </div>
         )}
         {!loading && !listError && expensePage?.total === 0 && (
           <p className="mt-5 text-sm text-blue-100/80">No expenses yet. Import a CSV to get started.</p>
@@ -329,6 +380,17 @@ export default function ExpenseImportReview() {
                     <time dateTime={expense.transaction_date} className="text-sm text-blue-100/65">
                       {expense.transaction_date}
                     </time>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                      <span className="rounded-md border border-blue-200/20 bg-blue-100/10 px-2 py-1 text-blue-100">
+                        {EXPENSE_CATEGORIES.find((category) => category.code === expense.category_code)?.label}
+                      </span>
+                      {expense.needs_review && (
+                        <span className="rounded-md border border-amber-200/30 bg-amber-900/30 px-2 py-1 text-amber-100">
+                          Needs review ·{" "}
+                          {expense.review_reason === "ambiguous" ? "conflicting longest rules" : "no matching rule"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="shrink-0 font-semibold text-blue-100 tabular-nums">
                     {formatAmount(expense.amount)} {expense.currency}

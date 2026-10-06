@@ -518,6 +518,17 @@ async function run() {
       dashboard.html.includes("Loading expenses") &&
       dashboard.html.includes("Sign out"),
   );
+  assert(
+    "dashboard exposes rule and summary landmarks with independent SSR loading states",
+    dashboard.html.includes('aria-labelledby="category-rules-heading"') &&
+      dashboard.html.includes('id="rule-keyword"') &&
+      dashboard.html.includes('id="rule-category"') &&
+      dashboard.html.includes("Loading category rules") &&
+      dashboard.html.includes('aria-labelledby="monthly-summary-heading"') &&
+      dashboard.html.includes("Loading monthly summary") &&
+      dashboard.html.includes("Europe/Warsaw") &&
+      dashboard.html.includes("All dates"),
+  );
   const initiallyEmpty = check("new account review loads empty", await request(owner, "/api/expenses?page=1"), {
     status: 200,
   });

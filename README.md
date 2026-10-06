@@ -242,8 +242,24 @@ Cent totals are exact non-negative decimal strings, including above JavaScript's
 safe integer limit. Database aggregation covers the entire month, not just the
 visible expense page. Empty months return valid zero totals; malformed service
 results are errors, not fabricated empty data. Authentication/unavailable
-service/query failures follow 401/503/500 respectively. The rule editor and
-chart UI are delivered separately in phase 3.
+service/query failures follow 401/503/500 respectively.
+
+The dashboard includes a labelled keyword/category form, a paginated saved-rule
+list, edit/cancel controls and explicit delete confirmation. Duplicate errors
+direct you to edit the existing rule; failed writes preserve the form. Rule
+changes refresh the rules, visible all-date expense page and monthly summary.
+Imports retain their result counters and reset expense review to page one while
+refreshing the summary. Each read has independent loading, error and retry
+states; superseded requests cannot display stale refresh results.
+
+The current Warsaw month and total positive spending appear above a static SVG
+pie and a complete ten-category textual legend with exact PLN amounts and
+one-decimal shares. Zero months show an empty state and ten zero rows; a single
+category draws a complete circle. Tiny positive shares retain subpixel wedges;
+the legend provides exact values. The chart does not filter the all-date list,
+and pagination never calculates summary totals from visible rows. Restoring
+browser focus or visibility refreshes the summary and adopts the current
+Warsaw month.
 
 The HTTP smoke gate retains existing auth/import/pagination assertions and adds
 isolated synthetic sessions for category CRUD, owner isolation, mutation/body
@@ -251,6 +267,10 @@ limits, duplicates/races, live recalculation and persistence. New expense dates
 come from the reported current Warsaw period, including neighboring-month
 exclusions and more than one review/rule page. Unit tests independently check
 UTC/Warsaw month boundaries, leap years and integer-safe money presentation.
+The same gates also cover zero/single/multiple-category pie geometry and SSR
+rule/summary landmarks with loading states. Human verification remains necessary
+for hydration, keyboard add/edit/delete and duplicate handling, error/retry
+states, narrow/desktop layout, and chart/legend readability without color.
 
 ## CI
 

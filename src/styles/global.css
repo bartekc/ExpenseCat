@@ -28,6 +28,16 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+  --expense-chart-1: #34d399;
+  --expense-chart-2: #fb923c;
+  --expense-chart-3: #60a5fa;
+  --expense-chart-4: #c084fc;
+  --expense-chart-5: #facc15;
+  --expense-chart-6: #f472b6;
+  --expense-chart-7: #22d3ee;
+  --expense-chart-8: #a3e635;
+  --expense-chart-9: #f87171;
+  --expense-chart-10: #94a3b8;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -120,5 +130,17 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .expense-primary-button {
+    @apply rounded-lg bg-blue-200 px-5 py-2.5 text-sm font-semibold text-blue-950 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .expense-secondary-button {
+    @apply rounded-lg border border-white/20 px-3 py-2 text-sm text-blue-100 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .expense-rule-input {
+    @apply block w-full min-w-0 rounded-lg border border-white/20 bg-white/10 p-2.5 text-sm text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60;
   }
 }

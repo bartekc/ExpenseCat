@@ -358,12 +358,12 @@ Read-time matching scales with owned expenses and rules. During verification ins
 
 #### Automated
 
-- [ ] 3.1 `npm run test:unit`, `npm run lint`, and `npx astro check` pass, including zero/single/multiple-category geometry and large-cent formatting cases.
-- [ ] 3.2 `npm run build` passes on Node 22.22.3.
-- [ ] 3.3 `npm run smoke:storage` and `npm run smoke` against the configured local production preview pass all existing and new cases, including dashboard SSR landmarks.
+- [x] 3.1 `npm run test:unit`, `npm run lint`, and `npx astro check` pass, including zero/single/multiple-category geometry and large-cent formatting cases.
+- [x] 3.2 `npm run build` passes on Node 22.22.3.
+- [x] 3.3 `npm run smoke:storage` and `npm run smoke` against the configured local production preview pass all existing and new cases, including dashboard SSR landmarks.
 
 #### Manual
 
-- [ ] 3.4 Using the keyboard, add/edit/delete rules, handle a duplicate, and verify loading/error/retry states plus category refresh on existing expenses.
-- [ ] 3.5 Verify the Warsaw month label, all ten legend rows, readable zero/single/multiple-category charts, exact PLN totals, and usable layout at narrow and desktop widths without relying on color.
-- [ ] 3.6 Import current- and prior-month synthetic expenses, re-import duplicates, paginate the all-date table, and sign out/in: table reachability, current-only totals, rule persistence, Other review states, and non-filtering chart behavior remain correct.
+- [x] 3.4 Using the keyboard, add/edit/delete rules, handle a duplicate, and verify loading/error/retry states plus category refresh on existing expenses.
+- [x] 3.5 Verify the Warsaw month label, all ten legend rows, readable zero/single/multiple-category charts, exact PLN totals, and usable layout at narrow and desktop widths without relying on color.
+- [x] 3.6 Import current- and prior-month synthetic expenses, re-import duplicates, paginate the all-date table, and sign out/in: table reachability, current-only totals, rule persistence, Other review states, and non-filtering chart behavior remain correct.
