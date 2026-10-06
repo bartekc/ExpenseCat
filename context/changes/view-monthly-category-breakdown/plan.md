@@ -345,14 +345,14 @@ Read-time matching scales with owned expenses and rules. During verification ins
 
 #### Automated
 
-- [x] 2.1 `npm run test:unit` passes API-shape/input, Warsaw month-boundary/leap-year, precision-above-MAX_SAFE_INTEGER, and existing import regression tests.
-- [x] 2.2 `npm run lint` and `npx astro check` pass.
-- [x] 2.3 `npm run build` passes on Node 22.22.3.
-- [x] 2.4 `npm run smoke` against the configured local production preview passes rule CRUD, authentication/origin/body limits, categorized review, recalculation, period totals, and existing S-01 cases.
+- [x] 2.1 `npm run test:unit` passes API-shape/input, Warsaw month-boundary/leap-year, precision-above-MAX_SAFE_INTEGER, and existing import regression tests. — aaffa92
+- [x] 2.2 `npm run lint` and `npx astro check` pass. — aaffa92
+- [x] 2.3 `npm run build` passes on Node 22.22.3. — aaffa92
+- [x] 2.4 `npm run smoke` against the configured local production preview passes rule CRUD, authentication/origin/body limits, categorized review, recalculation, period totals, and existing S-01 cases. — aaffa92
 
 #### Manual
 
-- [x] 2.5 Inspect two signed-in sessions' rule/review/summary responses: private rules, correct Warsaw period, complete category totals, and distinct deliberate-Other versus needs-review outcomes.
+- [x] 2.5 Inspect two signed-in sessions' rule/review/summary responses: private rules, correct Warsaw period, complete category totals, and distinct deliberate-Other versus needs-review outcomes. — aaffa92
 
 ### Phase 3: Dashboard rule panel and monthly chart
 
