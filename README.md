@@ -254,6 +254,28 @@ Imports retain their result counters and reset expense review to page one while
 refreshing the summary. Each read has independent loading, error and retry
 states; superseded requests cannot display stale refresh results.
 
+Each saved expense offers an inline category correction. Opening it reads fresh
+state, preselects the current category, starts with an empty phrase and defaults
+learning on. Turn learning off for a one-off correction, including deliberate
+Other or the same displayed category. Manual assignments have a visible marker.
+Only one draft is open; Cancel or switching to another expense explicitly
+discards it and returns focus. List/rule refreshes and pagination retain its
+input, revision and confirmation. All dashboard writes share a synchronous
+pending guard, disabling competing writes, row switches and pagination.
+
+A conflicting rule shows its phrase and old/requested categories before explicit
+replacement. Any field change clears that confirmation. Stale decisions and
+uncertain results retain input and block writes. Check current state displays
+persisted values separately from the draft; explicitly review and accept the
+current revision before another save. An invalid phrase can remain editable
+while an expense-only check runs, but another learning decision needs a valid
+phrase and its own successful rule check. Checks never retry writes or prove
+which earlier request committed. Restore automatic keeps rules, so the category
+can stay the same. Confirmed save/reset and successful checks refresh rules,
+the current expense page and summary independently without resetting the page.
+Corrections outside this month may leave the chart unchanged; learning can still
+alter this month's automatic totals.
+
 The current Warsaw month and total positive spending appear above a static SVG
 pie and a complete ten-category textual legend with exact PLN amounts and
 one-decimal shares. Zero months show an empty state and ten zero rows; a single
@@ -364,6 +386,14 @@ atomic rollback. Also verify owner isolation, recovery beyond the first rule pag
 all-date pagination, totals, re-import and sign-out/sign-in persistence. Obtain
 human confirmation of these API cases before considering this phase complete;
 unchanged HTTP smoke is regression evidence only.
+
+Human acceptance of the hydrated editor also covers keyboard and narrow/desktop
+layout, save with/without learning, replacement confirmation, explicit draft
+discard, reset, manual Other/markers, retained pagination, unchanged total
+spending and the complete ten-row legend. Use two tabs and interrupted responses
+to verify stale corrections/confirmations, uncertain-result checks, retained
+drafts and independent resource failures. These new flows have no added automated
+coverage; existing smoke checks cover regressions and SSR/API paths only.
 
 ## CI
 

@@ -10,14 +10,28 @@ interface Props {
   onRetry: () => void;
   onPage: (page: number) => void;
   onSaved: (deleted: boolean) => void;
+  mutationPending: boolean;
+  beginMutation: () => boolean;
+  endMutation: () => void;
 }
 
-export default function CategoryRulesPanel({ rulePage, loading, error, onRetry, onPage, onSaved }: Props) {
+export default function CategoryRulesPanel({
+  rulePage,
+  loading,
+  error,
+  onRetry,
+  onPage,
+  onSaved,
+  mutationPending,
+  beginMutation,
+  endMutation,
+}: Props) {
   const [keyword, setKeyword] = useState("");
   const [category, setCategory] = useState<ExpenseCategoryCode>("groceries");
   const [editing, setEditing] = useState<CategoryRule | null>(null);
   const [deleting, setDeleting] = useState<CategoryRule | null>(null);
-  const [pending, setPending] = useState(false);
+  const [localPending, setPending] = useState(false);
+  const pending = localPending || mutationPending;
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const mutation = useRef<AbortController | null>(null);
@@ -25,8 +39,8 @@ export default function CategoryRulesPanel({ rulePage, loading, error, onRetry, 
 
   useEffect(() => () => mutation.current?.abort(), []);
   useEffect(() => {
-    if (status && !pending) keywordInput.current?.focus();
-  }, [status, pending]);
+    if (status && !localPending) keywordInput.current?.focus();
+  }, [status, localPending]);
 
   function resetForm() {
     setKeyword("");
@@ -36,7 +50,7 @@ export default function CategoryRulesPanel({ rulePage, loading, error, onRetry, 
 
   async function saveRule(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (mutation.current) return;
+    if (mutation.current || mutationPending) return;
     setMutationError(null);
     setStatus(null);
     const input = { keyword, category_code: category };
@@ -48,7 +62,7 @@ export default function CategoryRulesPanel({ rulePage, loading, error, onRetry, 
   }
 
   async function mutate(method: "POST" | "PATCH" | "DELETE", id?: string, input?: object) {
-    if (mutation.current) return;
+    if (mutation.current || !beginMutation()) return;
     const controller = new AbortController();
     mutation.current = controller;
     setPending(true);
@@ -84,7 +98,7 @@ export default function CategoryRulesPanel({ rulePage, loading, error, onRetry, 
       if (method !== "DELETE" || editing?.id === id) resetForm();
       setDeleting(null);
       setStatus(
-        `${method === "DELETE" ? "Rule deleted" : method === "PATCH" ? "Rule updated" : "Rule added"}. Current rules apply to all saved expenses. The expense list and monthly summary have their own refresh status.`,
+        `${method === "DELETE" ? "Rule deleted" : method === "PATCH" ? "Rule updated" : "Rule added"}. Rules affect existing and future automatic assignments; manual corrections take precedence. The expense list and monthly summary have their own refresh status.`,
       );
       onSaved(method === "DELETE");
     } catch (failure) {
@@ -93,6 +107,7 @@ export default function CategoryRulesPanel({ rulePage, loading, error, onRetry, 
     } finally {
       if (!controller.signal.aborted) setPending(false);
       if (mutation.current === controller) mutation.current = null;
+      endMutation();
     }
   }
 
@@ -107,7 +122,8 @@ export default function CategoryRulesPanel({ rulePage, loading, error, onRetry, 
       <p id="category-rules-help" className="mt-2 text-sm text-blue-100/70">
         Add your own keyword phrases; no merchant rules are preloaded. Matching uses a case-insensitive literal
         substring with collapsed whitespace; accents matter. The longest matching phrase wins. Changes affect automatic
-        assignments across all saved expenses, including earlier dates.
+        assignments across earlier and future expenses. Equal longest phrases in different categories produce Other.
+        Manual corrections take precedence and survive rule changes.
       </p>
       <form onSubmit={(event) => void saveRule(event)} className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">

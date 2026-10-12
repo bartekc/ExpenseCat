@@ -329,27 +329,27 @@ Use short transaction-scoped locks; never hold a transaction while awaiting the 
 
 #### Automated
 
-- [x] 2.1 Existing unit suite passes without altered expectations or test edits: `npm run test:unit`.
-- [x] 2.2 Lint and type checks pass: `npm run lint`, `npx astro sync`, and `npx astro check`.
-- [x] 2.3 Production build passes on Node 22.22.3: `npm run build`.
-- [x] 2.4 Existing storage and HTTP regression gates pass against local Supabase and production preview: `npm run smoke:storage` and `npm run smoke`.
+- [x] 2.1 Existing unit suite passes without altered expectations or test edits: `npm run test:unit`. — 9cc3f64
+- [x] 2.2 Lint and type checks pass: `npm run lint`, `npx astro sync`, and `npx astro check`. — 9cc3f64
+- [x] 2.3 Production build passes on Node 22.22.3: `npm run build`. — 9cc3f64
+- [x] 2.4 Existing storage and HTTP regression gates pass against local Supabase and production preview: `npm run smoke:storage` and `npm run smoke`. — 9cc3f64
 
 #### Manual
 
-- [x] 2.5 Exercise GET/PATCH/reset/check with owned, foreign and missing IDs; invalid fields/revisions/keywords, absent auth, wrong Origin, invalid UTF-8 and bodies above 16 KiB return the documented results without leaking data.
-- [x] 2.6 In two sessions of one user, verify 409 correction conflicts and confirmation tokens, same-category reuse, keyword mismatch rejection, and full rollback; a second owner cannot read or mutate that state.
-- [x] 2.7 Verify check-after-uncertain-save returns current expense and exact matching rule beyond the first rule page; totals, all-date pagination, re-import and sign-out/sign-in preserve the agreed results.
+- [x] 2.5 Exercise GET/PATCH/reset/check with owned, foreign and missing IDs; invalid fields/revisions/keywords, absent auth, wrong Origin, invalid UTF-8 and bodies above 16 KiB return the documented results without leaking data. — 9cc3f64
+- [x] 2.6 In two sessions of one user, verify 409 correction conflicts and confirmation tokens, same-category reuse, keyword mismatch rejection, and full rollback; a second owner cannot read or mutate that state. — 9cc3f64
+- [x] 2.7 Verify check-after-uncertain-save returns current expense and exact matching rule beyond the first rule page; totals, all-date pagination, re-import and sign-out/sign-in preserve the agreed results. — 9cc3f64
 
 ### Phase 3: Inline correction and coordinated refresh
 
 #### Automated
 
-- [ ] 3.1 Existing unit, lint and type gates pass: `npm run test:unit`, `npm run lint`, `npx astro sync`, and `npx astro check`.
-- [ ] 3.2 Production build passes on Node 22.22.3: `npm run build`.
-- [ ] 3.3 Existing storage and HTTP regression gates pass against the local production preview: `npm run smoke:storage` and `npm run smoke`.
+- [x] 3.1 Existing unit, lint and type gates pass: `npm run test:unit`, `npm run lint`, `npx astro sync`, and `npx astro check`.
+- [x] 3.2 Production build passes on Node 22.22.3: `npm run build`.
+- [x] 3.3 Existing storage and HTTP regression gates pass against the local production preview: `npm run smoke:storage` and `npm run smoke`.
 
 #### Manual
 
-- [ ] 3.4 By keyboard at narrow and desktop widths, open one inline editor, save with/without learning, confirm a conflicting rule, cancel and restore automatic; labels, focus, pending controls and announcements remain usable.
-- [ ] 3.5 With synthetic current/prior-month data, verify manual markers, deliberate Other, longest-rule and tie behavior after reset, unchanged total spending, correct category redistribution, all ten legend rows, retained pagination and persistence across re-import/sign-out/sign-in.
-- [ ] 3.6 Use two tabs plus network interruption to verify stale corrections and confirmations, uncertain save/check/retry, retained drafts and independent refresh failures; no automatic retry, stale-response overwrite or partial-write success is presented.
+- [x] 3.4 By keyboard at narrow and desktop widths, open one inline editor, save with/without learning, confirm a conflicting rule, cancel and restore automatic; labels, focus, pending controls and announcements remain usable.
+- [x] 3.5 With synthetic current/prior-month data, verify manual markers, deliberate Other, longest-rule and tie behavior after reset, unchanged total spending, correct category redistribution, all ten legend rows, retained pagination and persistence across re-import/sign-out/sign-in.
+- [x] 3.6 Use two tabs plus network interruption to verify stale corrections and confirmations, uncertain save/check/retry, retained drafts and independent refresh failures; no automatic retry, stale-response overwrite or partial-write success is presented.

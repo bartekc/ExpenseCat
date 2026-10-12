@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import CategoryRulesPanel from "./CategoryRulesPanel";
 import MonthlyCategoryBreakdown from "./MonthlyCategoryBreakdown";
+import ExpenseCategoryEditor from "./ExpenseCategoryEditor";
 import { EXPENSE_CATEGORIES } from "@/lib/expenses/categories";
-import { isExpensePage, isRecord } from "@/lib/expenses/contracts";
+import { isRecord } from "@/lib/expenses/contracts";
+import { isCorrectableExpensePage, type CorrectableExpense } from "@/lib/expenses/corrections";
 import { isMonthlySummary } from "@/lib/expenses/monthly";
 import { isCategoryRulePage } from "@/lib/expenses/rules";
 
@@ -118,7 +120,13 @@ function formatAmount(amount: string | number): string {
 export default function ExpenseImportReview() {
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const importPending = useRef(false);
+  // All writes in this island acquire this ref before starting a request. State
+  // alone cannot guard competing handlers before React's next render.
+  const mutationPendingRef = useRef(false);
+  const [mutationPending, setMutationPending] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<CorrectableExpense | null>(null);
+  const initiatingControl = useRef<HTMLButtonElement | null>(null);
+  const expensesHeading = useRef<HTMLHeadingElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -131,7 +139,7 @@ export default function ExpenseImportReview() {
     data: expensePage,
     loading,
     error: listError,
-  } = useApiResource(`/api/expenses?page=${page}`, revision, isExpensePage, "Expenses could not be loaded.");
+  } = useApiResource(`/api/expenses?page=${page}`, revision, isCorrectableExpensePage, "Expenses could not be loaded.");
   const rules = useApiResource(
     `/api/category-rules?page=${rulesPage}`,
     rulesRevision,
@@ -159,7 +167,7 @@ export default function ExpenseImportReview() {
 
   async function handleImport(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (importPending.current) return;
+    if (mutationPendingRef.current) return;
     setFileError(null);
     setResult(null);
 
@@ -172,7 +180,7 @@ export default function ExpenseImportReview() {
       return;
     }
 
-    importPending.current = true;
+    if (!beginMutation()) return;
     setImporting(true);
     setProgress(0);
     try {
@@ -184,18 +192,20 @@ export default function ExpenseImportReview() {
     } catch (error) {
       setFileError(error instanceof Error ? error.message : "CSV import failed. Please try again.");
     } finally {
-      importPending.current = false;
+      endMutation();
       setImporting(false);
       setProgress(null);
     }
   }
 
   function showPage(nextPage: number) {
+    if (mutationPendingRef.current) return;
     setPage(nextPage);
     setRevision((current) => current + 1);
   }
 
   function showRulesPage(nextPage: number) {
+    if (mutationPendingRef.current) return;
     setRulesPage(nextPage);
     setRulesRevision((current) => current + 1);
   }
@@ -206,6 +216,48 @@ export default function ExpenseImportReview() {
     setRevision((current) => current + 1);
     setSummaryRevision((current) => current + 1);
   }
+
+  function beginMutation() {
+    if (mutationPendingRef.current) return false;
+    mutationPendingRef.current = true;
+    setMutationPending(true);
+    return true;
+  }
+
+  function endMutation() {
+    mutationPendingRef.current = false;
+    setMutationPending(false);
+  }
+
+  function closeEditor() {
+    if (mutationPendingRef.current) return;
+    setSelectedExpense(null);
+    const control = initiatingControl.current;
+    const selectedId = selectedExpense?.id;
+    // The initiating button becomes enabled when the closed editor is rendered.
+    requestAnimationFrame(() => {
+      if (control?.isConnected) control.focus();
+      else {
+        const replacement = selectedId ? document.getElementById(`correct-expense-${selectedId}`) : null;
+        (replacement ?? expensesHeading.current)?.focus();
+      }
+    });
+  }
+
+  const editor = selectedExpense ? (
+    <li key={`editor-${selectedExpense.id}`} className="list-none">
+      <ExpenseCategoryEditor
+        expense={selectedExpense}
+        mutationPending={mutationPending}
+        beginMutation={beginMutation}
+        endMutation={endMutation}
+        onRefresh={() => {
+          refreshAfterRule(false);
+        }}
+        onClose={closeEditor}
+      />
+    </li>
+  ) : null;
 
   return (
     <div className="space-y-6">
@@ -232,7 +284,7 @@ export default function ExpenseImportReview() {
               name="file"
               type="file"
               accept=".csv,text/csv"
-              disabled={importing}
+              disabled={mutationPending}
               onChange={(event) => {
                 setFile(event.currentTarget.files?.[0] ?? null);
               }}
@@ -241,7 +293,7 @@ export default function ExpenseImportReview() {
           </div>
           <button
             type="submit"
-            disabled={importing}
+            disabled={mutationPending}
             className="rounded-lg bg-blue-200 px-5 py-2.5 text-sm font-semibold text-blue-950 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             {importing ? "Importing…" : "Import expenses"}
@@ -327,6 +379,9 @@ export default function ExpenseImportReview() {
         }}
         onPage={showRulesPage}
         onSaved={refreshAfterRule}
+        mutationPending={mutationPending}
+        beginMutation={beginMutation}
+        endMutation={endMutation}
       />
 
       <section
@@ -335,13 +390,18 @@ export default function ExpenseImportReview() {
         className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-xl sm:p-6"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="expenses-heading" className="text-xl font-semibold">
+          <h2
+            ref={expensesHeading}
+            id="expenses-heading"
+            tabIndex={-1}
+            className="text-xl font-semibold focus-visible:outline-2 focus-visible:outline-white"
+          >
             Saved expenses
           </h2>
           {expensePage && <p className="text-sm text-blue-100/70">{expensePage.total} total</p>}
         </div>
         <p className="mt-2 text-sm text-blue-100/70">
-          All dates · newest first. Category rules apply to every saved expense.
+          All dates · newest first. Rules affect automatic assignments; manual corrections take precedence.
         </p>
         {loading && (
           <p role="status" className="mt-5 text-sm text-blue-100/80">
@@ -367,37 +427,69 @@ export default function ExpenseImportReview() {
         {!loading && !listError && expensePage?.total === 0 && (
           <p className="mt-5 text-sm text-blue-100/80">No expenses yet. Import a CSV to get started.</p>
         )}
-        {!loading && !listError && expensePage && expensePage.expenses.length > 0 && (
-          <>
-            <ol className="mt-5 divide-y divide-white/10">
-              {expensePage.expenses.map((expense) => (
-                <li
-                  key={expense.id}
-                  className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium break-words text-white">{expense.title}</p>
-                    <time dateTime={expense.transaction_date} className="text-sm text-blue-100/65">
-                      {expense.transaction_date}
-                    </time>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                      <span className="rounded-md border border-blue-200/20 bg-blue-100/10 px-2 py-1 text-blue-100">
-                        {EXPENSE_CATEGORIES.find((category) => category.code === expense.category_code)?.label}
+        {/* Keep this list and its keyed editor mounted even when refreshed rows
+            are hidden. Moving the editor within these siblings preserves its draft. */}
+        <ol className="mt-5 divide-y divide-white/10">
+          {[
+            ...(expensePage?.expenses ?? []).flatMap((expense) => [
+              <li
+                key={expense.id}
+                className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium break-words text-white">{expense.title}</p>
+                  <time dateTime={expense.transaction_date} className="text-sm text-blue-100/65">
+                    {expense.transaction_date}
+                  </time>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                    <span className="rounded-md border border-blue-200/20 bg-blue-100/10 px-2 py-1 text-blue-100">
+                      {EXPENSE_CATEGORIES.find((category) => category.code === expense.category_code)?.label}
+                    </span>
+                    {expense.manual_category_code !== null && (
+                      <span className="rounded-md border border-emerald-200/30 bg-emerald-950/30 px-2 py-1 text-emerald-100">
+                        Manual correction
                       </span>
-                      {expense.needs_review && (
-                        <span className="rounded-md border border-amber-200/30 bg-amber-900/30 px-2 py-1 text-amber-100">
-                          Needs review ·{" "}
-                          {expense.review_reason === "ambiguous" ? "conflicting longest rules" : "no matching rule"}
-                        </span>
-                      )}
-                    </div>
+                    )}
+                    {expense.needs_review && (
+                      <span className="rounded-md border border-amber-200/30 bg-amber-900/30 px-2 py-1 text-amber-100">
+                        Needs review ·{" "}
+                        {expense.review_reason === "ambiguous" ? "conflicting longest rules" : "no matching rule"}
+                      </span>
+                    )}
                   </div>
-                  <p className="shrink-0 font-semibold text-blue-100 tabular-nums">
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-3 sm:flex-col sm:items-end">
+                  <p className="font-semibold text-blue-100 tabular-nums">
                     {formatAmount(expense.amount)} {expense.currency}
                   </p>
-                </li>
-              ))}
-            </ol>
+                  <button
+                    id={`correct-expense-${expense.id}`}
+                    type="button"
+                    disabled={mutationPending || selectedExpense?.id === expense.id}
+                    aria-label={`${selectedExpense ? "Discard draft and correct" : "Correct category for"} ${expense.title}, ${expense.transaction_date}`}
+                    className="expense-secondary-button"
+                    onClick={(event) => {
+                      if (mutationPendingRef.current) return;
+                      initiatingControl.current?.focus();
+                      initiatingControl.current = event.currentTarget;
+                      setSelectedExpense(expense);
+                    }}
+                  >
+                    {selectedExpense && selectedExpense.id !== expense.id
+                      ? "Discard draft and correct"
+                      : "Correct category"}
+                  </button>
+                </div>
+              </li>,
+              selectedExpense?.id === expense.id ? editor : null,
+            ]),
+            selectedExpense && !expensePage?.expenses.some((expense) => expense.id === selectedExpense.id)
+              ? editor
+              : null,
+          ]}
+        </ol>
+        {!loading && !listError && expensePage && expensePage.expenses.length > 0 && (
+          <>
             {expensePage.totalPages > 1 && (
               <nav
                 aria-label="Expense pages"
@@ -405,7 +497,7 @@ export default function ExpenseImportReview() {
               >
                 <button
                   type="button"
-                  disabled={page <= 1}
+                  disabled={mutationPending || page <= 1}
                   onClick={() => {
                     showPage(page - 1);
                   }}
@@ -418,7 +510,7 @@ export default function ExpenseImportReview() {
                 </span>
                 <button
                   type="button"
-                  disabled={page >= expensePage.totalPages}
+                  disabled={mutationPending || page >= expensePage.totalPages}
                   onClick={() => {
                     showPage(page + 1);
                   }}
