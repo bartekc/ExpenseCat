@@ -1,10 +1,10 @@
 ---
 change_id: correct-expense-category
 title: Correct expense category
-status: impl_reviewed
+status: archived
 created: 2026-10-12
-updated: 2026-10-13
-archived_at: null
+updated: 2026-10-12
+archived_at: 2026-10-12T22:33:13Z
 ---
 
 ## Notes
