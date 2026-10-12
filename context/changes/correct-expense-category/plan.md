@@ -314,31 +314,31 @@ Use short transaction-scoped locks; never hold a transaction while awaiting the 
 
 #### Automated
 
-- [x] 1.1 Additive migration applies to local Supabase without resetting existing data: `npx supabase migration up --local`.
-- [x] 1.2 Existing storage regression gate passes unchanged: `npm run smoke:storage`.
-- [x] 1.3 Existing unit regression gate passes unchanged: `npm run test:unit`.
+- [x] 1.1 Additive migration applies to local Supabase without resetting existing data: `npx supabase migration up --local`. — b75c4ad
+- [x] 1.2 Existing storage regression gate passes unchanged: `npm run smoke:storage`. — b75c4ad
+- [x] 1.3 Existing unit regression gate passes unchanged: `npm run test:unit`. — b75c4ad
 
 #### Manual
 
-- [x] 1.4 Using two authenticated synthetic users and anon, verify correction-state/RPC isolation, denied delete/identity transfer/revision spoofing, owned complete-expense checks, and unchanged transaction fields.
-- [x] 1.5 Verify correction-only, new rule, same-category reuse, confirmed different-category replacement, literal normalized title validation, deliberate Other, manual precedence, reset retaining rules, and matching list/aggregate results.
-- [x] 1.6 Exercise concurrent correction/reset, stale rule confirmation including edit-back and delete/recreate, and a concurrent new-rule collision; rejected operations leave neither a partial rule change nor a partial correction.
-- [x] 1.7 Check representative local 10,000-expense/100-rule reads with mixed manual/automatic state; record runtime, complete counts and exact totals, and verify old explicit-column reads/import writes remain compatible.
+- [x] 1.4 Using two authenticated synthetic users and anon, verify correction-state/RPC isolation, denied delete/identity transfer/revision spoofing, owned complete-expense checks, and unchanged transaction fields. — b75c4ad
+- [x] 1.5 Verify correction-only, new rule, same-category reuse, confirmed different-category replacement, literal normalized title validation, deliberate Other, manual precedence, reset retaining rules, and matching list/aggregate results. — b75c4ad
+- [x] 1.6 Exercise concurrent correction/reset, stale rule confirmation including edit-back and delete/recreate, and a concurrent new-rule collision; rejected operations leave neither a partial rule change nor a partial correction. — b75c4ad
+- [x] 1.7 Check representative local 10,000-expense/100-rule reads with mixed manual/automatic state; record runtime, complete counts and exact totals, and verify old explicit-column reads/import writes remain compatible. — b75c4ad
 
 ### Phase 2: Correction API and conflict handling
 
 #### Automated
 
-- [ ] 2.1 Existing unit suite passes without altered expectations or test edits: `npm run test:unit`.
-- [ ] 2.2 Lint and type checks pass: `npm run lint`, `npx astro sync`, and `npx astro check`.
-- [ ] 2.3 Production build passes on Node 22.22.3: `npm run build`.
-- [ ] 2.4 Existing storage and HTTP regression gates pass against local Supabase and production preview: `npm run smoke:storage` and `npm run smoke`.
+- [x] 2.1 Existing unit suite passes without altered expectations or test edits: `npm run test:unit`.
+- [x] 2.2 Lint and type checks pass: `npm run lint`, `npx astro sync`, and `npx astro check`.
+- [x] 2.3 Production build passes on Node 22.22.3: `npm run build`.
+- [x] 2.4 Existing storage and HTTP regression gates pass against local Supabase and production preview: `npm run smoke:storage` and `npm run smoke`.
 
 #### Manual
 
-- [ ] 2.5 Exercise GET/PATCH/reset/check with owned, foreign and missing IDs; invalid fields/revisions/keywords, absent auth, wrong Origin, invalid UTF-8 and bodies above 16 KiB return the documented results without leaking data.
-- [ ] 2.6 In two sessions of one user, verify 409 correction conflicts and confirmation tokens, same-category reuse, keyword mismatch rejection, and full rollback; a second owner cannot read or mutate that state.
-- [ ] 2.7 Verify check-after-uncertain-save returns current expense and exact matching rule beyond the first rule page; totals, all-date pagination, re-import and sign-out/sign-in preserve the agreed results.
+- [x] 2.5 Exercise GET/PATCH/reset/check with owned, foreign and missing IDs; invalid fields/revisions/keywords, absent auth, wrong Origin, invalid UTF-8 and bodies above 16 KiB return the documented results without leaking data.
+- [x] 2.6 In two sessions of one user, verify 409 correction conflicts and confirmation tokens, same-category reuse, keyword mismatch rejection, and full rollback; a second owner cannot read or mutate that state.
+- [x] 2.7 Verify check-after-uncertain-save returns current expense and exact matching rule beyond the first rule page; totals, all-date pagination, re-import and sign-out/sign-in preserve the agreed results.
 
 ### Phase 3: Inline correction and coordinated refresh
 

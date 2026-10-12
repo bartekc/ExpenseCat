@@ -1,12 +1,7 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
-import {
-  EXPENSE_PAGE_SIZE as PAGE_SIZE,
-  expenseJson as json,
-  isExpense,
-  isSafeCount,
-  parsePage,
-} from "@/lib/expenses/contracts";
+import { EXPENSE_PAGE_SIZE as PAGE_SIZE, expenseJson as json, isSafeCount, parsePage } from "@/lib/expenses/contracts";
+import { isCorrectableExpensePage } from "@/lib/expenses/corrections";
 
 export const GET: APIRoute = async (context) => {
   if (!context.locals.user) return json({ error: "Authentication required" }, 401);
@@ -31,17 +26,16 @@ export const GET: APIRoute = async (context) => {
 
   const { data, error } = await supabase
     .from("expense_review")
-    .select("id,transaction_date,amount,title,currency,category_code,needs_review,review_reason")
+    .select(
+      "id,transaction_date,amount,title,currency,category_code,needs_review,review_reason,manual_category_code,correction_revision",
+    )
     .order("transaction_date", { ascending: false })
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(offset, offset + PAGE_SIZE - 1);
 
-  if (error || !Array.isArray(data) || !data.every(isExpense))
-    return json({ error: "Expenses could not be loaded" }, 500);
+  const result = { expenses: data, page, pageSize: PAGE_SIZE, total: count, totalPages: Math.ceil(count / PAGE_SIZE) };
+  if (error || !isCorrectableExpensePage(result)) return json({ error: "Expenses could not be loaded" }, 500);
 
-  return json(
-    { expenses: data, page, pageSize: PAGE_SIZE, total: count, totalPages: Math.ceil(count / PAGE_SIZE) },
-    200,
-  );
+  return json(result, 200);
 };

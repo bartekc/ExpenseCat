@@ -207,9 +207,10 @@ It needs a reachable Supabase instance (local or cloud) with email confirmation 
 
 Signed-in users can read categorized expenses using `GET /api/expenses?page=N`.
 The existing all-date newest-first list and 50-row pagination remain unchanged;
-each row adds `category_code`, `needs_review`, and `review_reason` (`unmatched`,
-`ambiguous`, or null). Owner IDs are never returned. Re-imports skip duplicate
-transactions without changing stored fields or rules.
+each row includes `category_code`, `needs_review`, and `review_reason` (`unmatched`,
+`ambiguous`, or null), plus `manual_category_code` (a fixed category or null) and
+`correction_revision` (a decimal string). Owner IDs are never returned. Re-imports
+skip duplicate transactions without changing stored fields, rules or manual corrections.
 
 `GET /api/category-rules?page=N` returns private rules, all ten fixed category
 descriptors, and `page`, `pageSize` (50), `total`, and `totalPages`. Rules sort by
@@ -228,9 +229,10 @@ whitespace collapsing; accents stay significant. The longest normalized keyword
 wins. Equal longest matches for different categories produce Other/ambiguous;
 no match produces Other/unmatched. A deliberate Other rule has no review flag.
 Database constraints enforce duplicate rules, including concurrent requests.
-Rule edits recalculate existing and future expenses on the next read, without
-backfills or cached expense categories. Each owner's rules affect only their own
-expenses, and rules persist across sign-out/sign-in.
+Rule edits recalculate existing and future automatic assignments on the next read,
+without backfills or cached expense categories. Manual corrections take precedence
+and survive rule creation, editing, deletion and re-import. Each owner's rules
+affect only their own expenses, and rules persist across sign-out/sign-in.
 
 `GET /api/expenses/summary` takes no filters. It derives the current calendar
 month in **Europe/Warsaw** from the current instant and aggregates by transaction
@@ -271,6 +273,97 @@ The same gates also cover zero/single/multiple-category pie geometry and SSR
 rule/summary landmarks with loading states. Human verification remains necessary
 for hydration, keyboard add/edit/delete and duplicate handling, error/retry
 states, narrow/desktop layout, and chart/legend readability without color.
+
+### Expense category correction API
+
+These endpoints use the signed-in session and return `Cache-Control: no-store`.
+IDs must be UUIDs; missing, foreign-owned and incomplete expenses all return 404.
+POST/PATCH require an exact same-origin `Origin`, `Content-Type: application/json`
+and a JSON object of at most 16 KiB. Unknown fields, arrays, malformed UTF-8, NUL,
+invalid revisions and invalid argument combinations return 400; oversized bodies
+return 413. Authentication, origin, unavailable-client and unexpected failures
+return 401, 403, 503 and generic 500 respectively. No endpoint accepts an owner ID.
+
+| Endpoint                                | Request                                    | Result                                                                       |
+| --------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `GET /api/expenses/:id/category`        | No body                                    | Current expense and null rule                                                |
+| `PATCH /api/expenses/:id/category`      | Correction below                           | Committed manual expense and learned rule, or null rule when learning is off |
+| `POST /api/expenses/:id/category/reset` | `{ "expected_revision": "123" }`           | Current automatic expense and null rule                                      |
+| `POST /api/expenses/:id/category/check` | `{}` or `{ "keyword": "merchant phrase" }` | Current expense and exact normalized matching rule, or null                  |
+
+All successful responses are 200 with exactly `{ "expense": ..., "rule": ... }`.
+The expense contains the public list fields including both correction metadata
+fields. A non-null manual category equals the effective category and clears
+review flags, including deliberate manual Other. A rule snapshot contains exactly
+`id`, raw `keyword`, `category_code` and `revision`; regular category-rule CRUD
+continues returning its original three-field DTO. Check is read-only and searches
+the exact normalized phrase across all rules, independently of rule pagination.
+
+Example learning correction:
+
+```json
+{
+  "category_code": "groceries",
+  "expected_revision": "0",
+  "learn_rule": true,
+  "keyword": "merchant phrase"
+}
+```
+
+Callers should default learning on when opening a new editor, but must always
+submit the explicit `learn_rule` boolean. With learning on, a nonblank phrase of
+at most 1,024 UTF-8 bytes is required, and its database-normalized form must also
+fit that bound and be a literal normalized title fragment. The user supplies the
+phrase. With learning off, omit both `keyword` and `rule_confirmation`; only the
+selected expense receives an override. Learning and the correction commit in one
+RPC transaction. Learned rules affect existing and future automatic assignments,
+subject to longest-phrase/tie matching; manual overrides stay protected.
+
+Revisions are opaque equality tokens, transported as canonical decimal strings
+in `0`–`9223372036854775807`, never JavaScript numbers. `"0"` means no correction
+state yet. Rule revisions are strictly positive. Every correction/reset gets a
+fresh revision, even when the effective category stays the same. Use the observed
+expense revision as `expected_revision`.
+
+A 409 response has an `error` and one of these `code` values:
+
+- `expense_conflict`: the observed expense revision is stale; check current state
+  before deliberately submitting a revised decision.
+- `rule_confirmation_required`: the exact phrase already targets another category.
+  The response includes its current four-field `rule` snapshot. Show its phrase,
+  old/new categories and effects on existing/future automatic assignments, then
+  obtain explicit user confirmation. Resubmit the unchanged correction with
+  `"rule_confirmation": { "id": "observed-rule-uuid", "revision": "456" }`.
+- `rule_conflict`: a competing rule write or stale confirmation invalidated the
+  decision. The response includes the current `rule` snapshot or null. Check and
+  review again; stale tokens never authorize replacement, even if categories now agree.
+
+Same-category rules are reused without changing their raw phrase or revision.
+Changing the draft phrase/category invalidates confirmation. Reset clears only
+the selected manual override, retaining revision history and all learned rules;
+its category can remain identical because a retained rule still applies. A
+prior-month correction alone may leave current-month totals unchanged, while
+learning can alter current-month automatic totals. The summary format stays unchanged.
+
+After a lost response, unexpected 5xx or malformed success, retain the draft and
+block further writes until check succeeds. Never automatically retry a mutation.
+An expense-only check can recover state when the draft phrase is invalid; resolve
+the phrase and check its matching rule before another learning decision. Checking
+reports current persisted state, not causal proof that a particular request
+committed. Refresh the list, rules and summary after a confirmed save/reset or
+successful recovery check; a refresh failure is separate from mutation success.
+
+Regression gates remain `npm run test:unit`, `npm run lint`, `npx astro sync`,
+`npx astro check`, `npm run build` on Node 22.22.3, `npm run smoke:storage` and
+`npm run smoke` against local Supabase and the production preview. No new automated
+correction coverage was added. Manual acceptance must exercise owned/foreign/missing
+IDs, authentication/origin denials, exact fields/revision bounds/keyword bounds,
+invalid UTF-8 and oversized bodies; two sessions must verify stale correction and
+rule tokens, explicit replacement, same-category reuse, nonmatching phrases and
+atomic rollback. Also verify owner isolation, recovery beyond the first rule page,
+all-date pagination, totals, re-import and sign-out/sign-in persistence. Obtain
+human confirmation of these API cases before considering this phase complete;
+unchanged HTTP smoke is regression evidence only.
 
 ## CI
 
