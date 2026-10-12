@@ -344,12 +344,12 @@ Use short transaction-scoped locks; never hold a transaction while awaiting the 
 
 #### Automated
 
-- [x] 3.1 Existing unit, lint and type gates pass: `npm run test:unit`, `npm run lint`, `npx astro sync`, and `npx astro check`.
-- [x] 3.2 Production build passes on Node 22.22.3: `npm run build`.
-- [x] 3.3 Existing storage and HTTP regression gates pass against the local production preview: `npm run smoke:storage` and `npm run smoke`.
+- [x] 3.1 Existing unit, lint and type gates pass: `npm run test:unit`, `npm run lint`, `npx astro sync`, and `npx astro check`. — 68a75d9
+- [x] 3.2 Production build passes on Node 22.22.3: `npm run build`. — 68a75d9
+- [x] 3.3 Existing storage and HTTP regression gates pass against the local production preview: `npm run smoke:storage` and `npm run smoke`. — 68a75d9
 
 #### Manual
 
-- [x] 3.4 By keyboard at narrow and desktop widths, open one inline editor, save with/without learning, confirm a conflicting rule, cancel and restore automatic; labels, focus, pending controls and announcements remain usable.
-- [x] 3.5 With synthetic current/prior-month data, verify manual markers, deliberate Other, longest-rule and tie behavior after reset, unchanged total spending, correct category redistribution, all ten legend rows, retained pagination and persistence across re-import/sign-out/sign-in.
-- [x] 3.6 Use two tabs plus network interruption to verify stale corrections and confirmations, uncertain save/check/retry, retained drafts and independent refresh failures; no automatic retry, stale-response overwrite or partial-write success is presented.
+- [x] 3.4 By keyboard at narrow and desktop widths, open one inline editor, save with/without learning, confirm a conflicting rule, cancel and restore automatic; labels, focus, pending controls and announcements remain usable. — 68a75d9
+- [x] 3.5 With synthetic current/prior-month data, verify manual markers, deliberate Other, longest-rule and tie behavior after reset, unchanged total spending, correct category redistribution, all ten legend rows, retained pagination and persistence across re-import/sign-out/sign-in. — 68a75d9
+- [x] 3.6 Use two tabs plus network interruption to verify stale corrections and confirmations, uncertain save/check/retry, retained drafts and independent refresh failures; no automatic retry, stale-response overwrite or partial-write success is presented. — 68a75d9
